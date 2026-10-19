@@ -73,13 +73,18 @@
   function property(label, value, config, extraClass = "") {
     const row = make("div", "detail-property " + extraClass);
     row.append(make("span", "detail-property-name", label));
-    const valueNode = make("button", "detail-property-value", value || "Add…");
-    valueNode.type = "button";
+    const valueNode = make("div", "detail-property-value", value || "Add…");
+    valueNode.tabIndex = 0;
+    valueNode.setAttribute("role", "button");
     valueNode.dataset.value = value || "";
     valueNode.setAttribute("aria-label", "Edit " + label);
-    valueNode.addEventListener("click", event => {
+    const editValue = event => {
       event.stopPropagation();
       startFieldEdit(valueNode, config);
+    };
+    valueNode.addEventListener("click", editValue);
+    valueNode.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); editValue(event); }
     });
     row.append(valueNode);
     return row;
