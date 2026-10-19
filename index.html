@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f8fb">
+  <meta name="description" content="A personal space for notes, bookmarks, images, and collections.">
+  <title>layerbase — Your personal workspace</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar">
+    <a class="brand" href="#" data-page="home">
+      <span class="brand-mark">l.</span>
+      <span>layerbase</span>
+    </a>
+
+    <button class="capture-button" id="newItemBtn">
+      <span class="capture-icon"><i data-lucide="plus"></i></span>
+      New item
+      <span class="shortcut">N</span>
+    </button>
+
+    <div class="nav-label">WORKSPACE</div>
+
+    <nav class="main-nav">
+      <button class="nav-item active" data-page="home">
+        <span class="nav-icon"><i data-lucide="house"></i></span>
+        <span>Home</span>
+      </button>
+
+      <button class="nav-item" data-page="timeline">
+        <span class="nav-icon"><i data-lucide="clock-3"></i></span>
+        <span>Timeline</span>
+      </button>
+
+      <button class="nav-item" data-page="collections">
+        <span class="nav-icon"><i data-lucide="layers-3"></i></span>
+        <span>Collections</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-section">
+      <div class="section-heading">
+        <span class="nav-label">YOUR SPACE</span>
+        <button class="icon-button small" id="addCollectionBtn"
+          title="New collection"><i data-lucide="plus"></i></button>
+      </div>
+
+      <div id="sidebarCollections" class="sidebar-collections"></div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="storage-indicator">
+        <span class="status-dot"></span>
+        <span>Stored locally</span>
+      </div>
+      <div class="sidebar-footer">Your space, your way.</div>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <header class="topbar">
+      <div class="breadcrumbs" id="breadcrumbs">
+        <span>Workspace</span>
+        <span class="breadcrumb-divider">/</span>
+        <strong>Home</strong>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-button search-trigger" id="searchBtn"
+          title="Search"><i data-lucide="search"></i></button>
+        <button class="avatar" title="Personal workspace">Y</button>
+      </div>
+    </header>
+
+    <div class="page-content" id="pageContent"></div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <section class="modal" role="dialog" aria-modal="true"
+    aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <div>
+        <div class="eyebrow">YOUR WORKSPACE</div>
+        <h2 id="modalTitle">New item</h2>
+      </div>
+      <button class="icon-button" id="closeModalBtn"
+        aria-label="Close">×</button>
+    </div>
+
+    <form id="itemForm">
+      <input type="hidden" id="editItemId">
+
+      <label class="field-label" for="itemType">Type</label>
+      <div class="type-picker">
+        <label class="type-option">
+          <input type="radio" name="itemType" value="note" checked>
+          <span class="type-option-inner">
+            <span class="type-symbol note-symbol"><i data-lucide="sticky-note"></i></span>
+            <span>Note</span>
+          </span>
+        </label>
+
+        <label class="type-option">
+          <input type="radio" name="itemType" value="bookmark">
+          <span class="type-option-inner">
+            <span class="type-symbol bookmark-symbol"><i data-lucide="link-2"></i></span>
+            <span>Bookmark</span>
+          </span>
+        </label>
+
+        <label class="type-option">
+          <input type="radio" name="itemType" value="image">
+          <span class="type-option-inner">
+            <span class="type-symbol image-symbol"><i data-lucide="image"></i></span>
+            <span>Image</span>
+          </span>
+        </label>
+      </div>
+
+      <label class="field-label" for="itemTitle">Title</label>
+      <input class="text-input" id="itemTitle"
+        placeholder="Give your item a name" required>
+
+      <div id="urlField" class="conditional-field" hidden>
+        <label class="field-label" for="itemUrl">Website URL</label>
+        <input class="text-input" id="itemUrl"
+          type="url" placeholder="https://example.com">
+      </div>
+
+      <div id="imageField" class="conditional-field" hidden>
+        <label class="field-label" for="itemImage">Image URL</label>
+        <input class="text-input" id="itemImage"
+          type="url" placeholder="https://example.com/image.jpg">
+        <div class="field-hint">
+          For this prototype, use an image URL.
+        </div>
+      </div>
+
+      <label class="field-label" for="itemContent">Content</label>
+      <textarea class="text-input textarea" id="itemContent"
+        placeholder="Write something, collect an idea, or add context..."
+        rows="5"></textarea>
+
+      <label class="field-label" for="itemTags">Tags</label>
+      <input class="text-input" id="itemTags"
+        placeholder="design, inspiration, ideas">
+
+      <label class="field-label" for="itemCollection">Collection</label>
+      <select class="text-input" id="itemCollection"></select>
+
+      <div class="modal-footer">
+        <button class="button secondary" type="button"
+          id="cancelModalBtn">Cancel</button>
+        <button class="button primary" type="submit">Save item</button>
+      </div>
+    </form>
+
+    <form id="collectionForm" hidden>
+      <label class="field-label" for="collectionName">Collection name</label>
+      <input class="text-input" id="collectionName"
+        placeholder="Give your collection a name" required maxlength="80">
+
+      <label class="field-label" for="collectionDescription">Description</label>
+      <textarea class="text-input textarea" id="collectionDescription"
+        placeholder="What will you collect here? (optional)"
+        rows="3" maxlength="240"></textarea>
+
+      <div class="modal-footer">
+        <button class="button secondary" type="button"
+          id="cancelCollectionBtn">Cancel</button>
+        <button class="button primary" type="submit">Create collection</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://unpkg.com/lucide@0.468.0"></script>
+<script src="https://unpkg.com/lucide@0.468.0"></script>
+<script src="./app.js"></script>
+</body>
+</html>
