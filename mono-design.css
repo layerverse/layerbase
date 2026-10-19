@@ -247,3 +247,69 @@
     grid-template-columns: minmax(90px, 34%) minmax(0, 1fr);
   }
 }
+
+
+/* Flatten the old beveled-border experiment from styles.css.
+   Every edge uses one consistent color instead of light/dark directional edges. */
+.sidebar,
+.capture-button,
+.icon-button,
+.button,
+.welcome-panel,
+.stat-card,
+.collection-card,
+.view-switcher,
+.select-input,
+.item-card,
+.timeline-entry,
+.modal,
+.type-option-inner,
+.text-input,
+.toast,
+.collection-icon,
+.empty-icon,
+.tag-chip,
+.search-box {
+  border-color: var(--line);
+}
+.topbar {
+  border-bottom-color: var(--line);
+}
+.item-cover {
+  border-color: var(--line);
+}
+.layout-river .item-cover {
+  border-color: var(--line);
+}
+.collection-card-bottom,
+.item-meta,
+.modal-footer {
+  border-top-color: var(--line);
+}
+.timeline-items {
+  border-left-color: var(--line);
+}
+
+/* Accent borders stay flat too — no bevel on hover or selection. */
+.capture-button:hover,
+.icon-button:hover,
+.button:hover,
+.collection-card:hover,
+.item-card:hover,
+.timeline-entry:hover,
+.item-card:hover .item-cover,
+.layout-river .item-card:hover .item-cover {
+  border-color: var(--purple-line);
+}
+.button.primary {
+  border-color: var(--purple);
+}
+.button.primary:hover {
+  border-color: #7958c5;
+}
+.nav-item.active,
+.collection-link.active,
+.view-button.active,
+.type-option input:checked + .type-option-inner {
+  border-color: #e6def8;
+}
