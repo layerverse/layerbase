@@ -1,198 +1,211 @@
-/* Layerbase item reader with an inline edit mode */
+/* Layerbase document view: click any property or text block to edit it in place. */
 (() => {
-  const $ = (s) => document.querySelector(s);
-  const el = (tag, cls, text) => {
+  const $ = (selector) => document.querySelector(selector);
+  const make = (tag, className, text) => {
     const node = document.createElement(tag);
-    if (cls) node.className = cls;
+    if (className) node.className = className;
     if (text !== undefined) node.textContent = text;
     return node;
   };
   let currentId = null;
-  let editing = false;
+  let activeEditor = false;
 
-  function field(labelText, name, value, options = {}) {
-    const wrap = el("label", "detail-edit-field");
-    wrap.append(el("span", "detail-edit-label", labelText));
-    let input;
-    if (options.multiline) {
-      input = el("textarea", "detail-edit-input detail-edit-textarea");
-      input.rows = options.rows || 5;
-    } else if (options.select) {
-      input = el("select", "detail-edit-input");
-      options.select.forEach(option => {
-        const node = el("option", "", option.label);
-        node.value = option.value;
-        input.append(node);
-      });
-    } else {
-      input = el("input", "detail-edit-input");
-      input.type = "text";
-    }
-    input.name = name;
-    input.value = value || "";
-    wrap.append(input);
-    return wrap;
+  function currentItem() { return state.items.find(item => item.id === currentId); }
+
+  function persist(mutator, message = "Item updated") {
+    const item = currentItem();
+    if (!item) return;
+    mutator(item);
+    item.updatedAt = new Date().toISOString();
+    saveData();
+    render();
+    renderDetail();
+    showToast(message);
   }
 
-  function buildEditor(item) {
-    const root = $("#detailContent");
-    root.replaceChildren();
-    const form = el("form", "detail-inline-editor");
-    form.id = "detailInlineForm";
-    form.append(field("Title", "title", item.title));
-    form.append(field("Type", "type", item.type, {
-      select: [
+  function startFieldEdit(target, config) {
+    if (activeEditor || !target || target.querySelector("input, textarea, select")) return;
+    const original = target.dataset.value || "";
+    activeEditor = true;
+    const control = config.multiline ? make("textarea", "detail-inline-input detail-inline-textarea") :
+      config.options ? make("select", "detail-inline-input") : make("input", "detail-inline-input");
+    if (control.tagName === "INPUT") control.type = "text";
+    if (config.options) config.options.forEach(option => {
+      const choice = make("option", "", option.label);
+      choice.value = option.value;
+      control.append(choice);
+    });
+    control.value = config.options ? config.options.find(option => option.label === original)?.value || original : original;
+    target.replaceChildren(control);
+    target.classList.add("is-editing");
+    control.focus();
+    if (config.multiline) {
+      control.rows = Math.max(4, Math.min(12, (original.match(/\n/g) || []).length + 3));
+      control.style.height = "auto";
+      control.style.height = Math.max(130, control.scrollHeight) + "px";
+    } else if (control.tagName === "INPUT") control.select();
+
+    let committed = false;
+    const finish = (commit) => {
+      if (committed) return;
+      committed = true;
+      activeEditor = false;
+      const value = control.value.trim();
+      if (commit && value !== original) persist(entry => config.apply(entry, value));
+      else renderDetail();
+    };
+    control.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finish(false);
+      } else if (event.key === "Enter" && !config.multiline) {
+        event.preventDefault();
+        finish(true);
+      } else if (event.key === "Enter" && event.metaKey) {
+        event.preventDefault();
+        finish(true);
+      }
+    });
+    control.addEventListener("blur", () => finish(true));
+    if (config.options) control.addEventListener("change", () => finish(true));
+  }
+
+  function property(label, value, config, extraClass = "") {
+    const row = make("div", "detail-property " + extraClass);
+    row.append(make("span", "detail-property-name", label));
+    const valueNode = make("button", "detail-property-value", value || "Add…");
+    valueNode.type = "button";
+    valueNode.dataset.value = value || "";
+    valueNode.setAttribute("aria-label", "Edit " + label);
+    valueNode.addEventListener("click", event => {
+      event.stopPropagation();
+      startFieldEdit(valueNode, config);
+    });
+    row.append(valueNode);
+    return row;
+  }
+
+  function renderProperties(item, root) {
+    const properties = make("section", "detail-properties");
+    properties.append(make("div", "detail-properties-heading", "Properties"));
+    properties.append(property("Type", typeNames[item.type] || "Note", {
+      options: [
         { value: "note", label: "Note" },
         { value: "bookmark", label: "Bookmark" },
         { value: "image", label: "Image" }
-      ]
+      ],
+      apply: (entry, value) => {
+        entry.type = value;
+        if (value !== "bookmark") entry.url = "";
+        if (value !== "image") entry.image = "";
+      }
+    }, "detail-property-type"));
+
+    if (item.type === "bookmark") properties.append(property("URL", item.url || "", {
+      apply: (entry, value) => { entry.url = safeUrl(value) || ""; }
     }));
-    form.append(field("URL", "url", item.url));
-    form.append(field("Image URL", "image", item.image));
-    form.append(field("Content", "content", item.content, { multiline: true, rows: 8 }));
-    form.append(field("Tags · comma separated", "tags", (item.tags || []).join(", ")));
+    if (item.type === "image") properties.append(property("Image URL", item.image || "", {
+      apply: (entry, value) => { entry.image = safeUrl(value) || ""; }
+    }));
+    properties.append(property("Tags", (item.tags || []).join(", "), {
+      apply: (entry, value) => {
+        entry.tags = value.split(",").map(tag => tag.trim()).filter(Boolean);
+      }
+    }));
 
-    const collections = el("fieldset", "detail-edit-field detail-edit-collections");
-    collections.append(el("legend", "detail-edit-label", "Collections"));
-    const selected = new Set(item.collectionIds || []);
+    const collectionRow = make("div", "detail-property detail-property-collections");
+    collectionRow.append(make("span", "detail-property-name", "Collections"));
+    const choices = make("div", "detail-property-value detail-property-value-multiselect");
+    const current = new Set(item.collectionIds || []);
     state.collections.forEach(collection => {
-      const label = el("label", "detail-collection-option");
-      const checkbox = el("input");
+      const label = make("label", "detail-collection-check");
+      const checkbox = make("input");
       checkbox.type = "checkbox";
-      checkbox.name = "collectionIds";
-      checkbox.value = collection.id;
-      checkbox.checked = selected.has(collection.id);
-      label.append(checkbox, el("span", "", collection.name));
-      collections.append(label);
+      checkbox.checked = current.has(collection.id);
+      checkbox.addEventListener("change", () => {
+        persist(entry => {
+          const ids = new Set(entry.collectionIds || []);
+          checkbox.checked ? ids.add(collection.id) : ids.delete(collection.id);
+          entry.collectionIds = [...ids];
+        });
+      });
+      label.append(checkbox, make("span", "", collection.name));
+      choices.append(label);
     });
-    form.append(collections);
+    if (!state.collections.length) choices.append(make("span", "detail-muted", "No collections yet"));
+    collectionRow.append(choices);
+    properties.append(collectionRow);
 
-    const actions = el("div", "detail-edit-actions");
-    const cancel = el("button", "button secondary", "Cancel");
-    cancel.type = "button";
-    cancel.addEventListener("click", () => renderDetail());
-    const save = el("button", "button primary", "Save changes");
-    save.type = "submit";
-    actions.append(cancel, save);
-    form.append(actions);
-    form.addEventListener("submit", saveInline);
-    form.querySelector('[name="type"]').addEventListener("change", updateTypeFields);
-    root.append(form);
-    updateTypeFields();
-  }
-
-  function updateTypeFields() {
-    const form = $("#detailInlineForm");
-    if (!form) return;
-    const type = form.elements.type.value;
-    const urlField = form.elements.url.closest(".detail-edit-field");
-    const imageField = form.elements.image.closest(".detail-edit-field");
-    urlField.hidden = type !== "bookmark";
-    imageField.hidden = type !== "image";
-  }
-
-  function saveInline(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const title = form.elements.title.value.trim();
-    if (!title) {
-      form.elements.title.focus();
-      return;
-    }
-    const item = state.items.find(entry => entry.id === currentId);
-    if (!item) return;
-    const type = form.elements.type.value;
-    const rawUrl = form.elements.url.value.trim();
-    const rawImage = form.elements.image.value.trim();
-    item.title = title;
-    item.type = type;
-    item.url = type === "bookmark" ? safeUrl(rawUrl) : "";
-    item.image = type === "image" ? safeUrl(rawImage) : "";
-    item.content = form.elements.content.value.trim();
-    item.tags = form.elements.tags.value.split(",").map(tag => tag.trim()).filter(Boolean);
-    item.collectionIds = [...form.querySelectorAll('[name="collectionIds"]:checked')].map(input => input.value);
-    item.updatedAt = new Date().toISOString();
-    saveData();
-    editing = false;
-    render();
-    renderDetail();
-    showToast("Item updated");
+    const created = make("div", "detail-property");
+    created.append(make("span", "detail-property-name", "Created"));
+    created.append(make("span", "detail-property-static", formatDate(item.createdAt)));
+    properties.append(created);
+    root.append(properties);
   }
 
   function renderDetail() {
-    const item = state.items.find(entry => entry.id === currentId);
+    const item = currentItem();
     if (!item) return closeDetail();
-    editing = false;
+    activeEditor = false;
     $("#detailBreadcrumb").textContent = typeNames[item.type] || "Item";
-    $("#detailEditBtn").hidden = false;
+    $("#detailEditBtn").hidden = true;
     const root = $("#detailContent");
     root.replaceChildren();
 
-    const typeRow = el("div", "detail-type-row");
-    const typeIcon = el("span", "detail-type-icon");
-    typeIcon.innerHTML = iconMarkup(typeSymbols[item.type] || "sticky-note");
-    typeRow.append(typeIcon, el("span", "", typeNames[item.type] || "Item"), el("span", "detail-dot", "·"), el("span", "", "Created " + formatDate(item.createdAt)));
-    const title = el("h1", "detail-title", item.title);
-    title.id = "detailTitle";
-    root.append(typeRow, title);
+    const title = make("h1", "detail-title detail-editable", item.title || "Untitled");
+    title.dataset.value = item.title || "";
+    title.tabIndex = 0;
+    title.setAttribute("role", "button");
+    title.setAttribute("aria-label", "Click to edit title");
+    const editTitle = () => startFieldEdit(title, { apply: (entry, value) => { entry.title = value || "Untitled"; } });
+    title.addEventListener("click", editTitle);
+    title.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); editTitle(); }
+    });
+    root.append(title);
+    renderProperties(item, root);
 
-    const image = safeUrl(item.image);
-    if (image) {
-      const figure = el("figure", "detail-image");
-      const img = el("img");
-      img.src = image;
+    const body = make("section", "detail-body-section");
+    const bodyLabel = make("div", "detail-body-label", "Content");
+    const content = make("div", "detail-prose detail-editable", item.content || "Click here to add content…");
+    content.dataset.value = item.content || "";
+    content.classList.toggle("detail-empty-content", !item.content);
+    content.tabIndex = 0;
+    content.setAttribute("role", "button");
+    content.setAttribute("aria-label", "Click to edit content");
+    const editContent = () => startFieldEdit(content, { multiline: true, apply: (entry, value) => { entry.content = value; } });
+    content.addEventListener("click", editContent);
+    content.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); editContent(); }
+    });
+    bodyLabel.addEventListener("click", editContent);
+    body.append(bodyLabel, content);
+
+    if (item.type === "image" && safeUrl(item.image)) {
+      const figure = make("figure", "detail-image");
+      const img = make("img");
+      img.src = safeUrl(item.image);
       img.alt = item.title;
       figure.append(img);
-      root.append(figure);
+      body.insertBefore(figure, content);
     }
-    const link = safeUrl(item.url);
-    if (link) {
-      const a = el("a", "detail-link");
-      a.href = link;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      const linkIcon = el("span", "detail-link-icon");
-      linkIcon.innerHTML = iconMarkup("external-link");
-      const copy = el("span", "detail-link-copy");
-      copy.append(el("strong", "", new URL(link).hostname), el("small", "", link));
-      a.append(linkIcon, copy);
-      root.append(a);
+    if (item.type === "bookmark" && safeUrl(item.url)) {
+      const link = make("a", "detail-link");
+      link.href = safeUrl(item.url);
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.append(make("span", "detail-link-icon", "↗"));
+      const copy = make("span", "detail-link-copy");
+      copy.append(make("strong", "", new URL(safeUrl(item.url)).hostname));
+      copy.append(make("small", "", item.url));
+      link.append(copy);
+      body.insertBefore(link, content);
     }
-    root.append(item.content ? el("div", "detail-prose", item.content) : el("div", "detail-empty-content", "No content yet."));
-    if (item.tags && item.tags.length) {
-      const section = el("section", "detail-section");
-      section.append(el("div", "detail-section-label", "TAGS"));
-      const tags = el("div", "detail-tags");
-      item.tags.forEach(tag => tags.append(el("span", "detail-tag", tag)));
-      section.append(tags);
-      root.append(section);
-    }
-    const names = (item.collectionIds || []).map(id => state.collections.find(c => c.id === id)?.name).filter(Boolean);
-    if (names.length) {
-      const section = el("section", "detail-section");
-      section.append(el("div", "detail-section-label", "IN COLLECTIONS"));
-      const list = el("div", "detail-collections");
-      names.forEach(name => list.append(el("span", "detail-collection", name)));
-      section.append(list);
-      root.append(section);
-    }
-    const footer = el("footer", "detail-footer");
-    footer.append(el("span", "", "Last edited " + formatDate(item.updatedAt || item.createdAt)));
-    const edit = el("button", "button secondary", "Edit item");
-    edit.type = "button";
-    edit.id = "detailEditInline";
-    edit.addEventListener("click", startEdit);
-    footer.append(edit);
-    root.append(footer);
+    const footer = make("footer", "detail-footer");
+    footer.append(make("span", "", "Last edited " + formatDate(item.updatedAt || item.createdAt)));
+    body.append(footer);
+    root.append(body);
     if (window.lucide) lucide.createIcons();
-  }
-
-  function startEdit() {
-    const item = state.items.find(entry => entry.id === currentId);
-    if (!item) return;
-    editing = true;
-    $("#detailEditBtn").hidden = true;
-    buildEditor(item);
   }
 
   function openDetail(item) {
@@ -202,13 +215,11 @@
     document.body.classList.add("detail-open");
     renderDetail();
   }
-
   function closeDetail() {
     $("#detailBackdrop").hidden = true;
     document.body.classList.remove("detail-open");
     currentId = null;
-    editing = false;
-    $("#detailEditBtn").hidden = false;
+    activeEditor = false;
   }
 
   document.addEventListener("click", event => {
@@ -220,7 +231,8 @@
     openDetail(state.items.find(item => item.id === card.dataset.itemCard));
   }, true);
   $("#closeDetailBtn").addEventListener("click", closeDetail);
-  $("#detailEditBtn").addEventListener("click", startEdit);
+  $("#detailEditBtn").hidden = true;
+  $("#detailEditBtn").addEventListener("click", () => {});
   $("#detailBackdrop").addEventListener("click", event => {
     if (event.target === $("#detailBackdrop")) closeDetail();
   });
