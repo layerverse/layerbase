@@ -196,39 +196,107 @@
     return menu;
   }
 
+  function blockActionMenu(blocks, index) {
+    const menu = make("div", "detail-block-menu detail-block-action-menu");
+    const current = blocks[index];
+    const types = [
+      ["paragraph", "Paragraph", "pilcrow"],
+      ["heading", "Heading", "heading-2"],
+      ["bulleted", "Bulleted list", "list"],
+      ["numbered", "Numbered list", "list-ordered"],
+      ["quote", "Quote", "quote"]
+    ];
+
+    types.forEach(([type, label, icon]) => {
+      const button = make("button", "detail-block-menu-item" + (current.type === type ? " is-current" : ""));
+      button.type = "button";
+      if (current.type === type) button.setAttribute("aria-current", "true");
+      const glyph = make("span", "detail-block-menu-icon", "");
+      if (window.lucide) glyph.innerHTML = '<i data-lucide="' + icon + '"></i>';
+      else glyph.textContent = "•";
+      button.append(glyph, make("span", "", label));
+      button.addEventListener("click", () => {
+        if (current.type === type) return;
+        const next = blocks.map((entry, i) => i === index ? { ...entry, type } : entry);
+        persistBlocks(next);
+      });
+      menu.append(button);
+    });
+
+    const divider = make("div", "detail-block-menu-divider");
+    divider.setAttribute("role", "separator");
+    menu.append(divider);
+
+    const duplicate = make("button", "detail-block-menu-item");
+    duplicate.type = "button";
+    const duplicateIcon = make("span", "detail-block-menu-icon", "");
+    if (window.lucide) duplicateIcon.innerHTML = '<i data-lucide="copy"></i>';
+    else duplicateIcon.textContent = "↗";
+    duplicate.append(duplicateIcon, make("span", "", "Duplicate block"));
+    duplicate.addEventListener("click", () => {
+      const copy = { ...current, id: "block-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7) };
+      const next = [...blocks];
+      next.splice(index + 1, 0, copy);
+      persistBlocks(next);
+    });
+    menu.append(duplicate);
+
+    const remove = make("button", "detail-block-menu-item detail-block-menu-danger");
+    remove.type = "button";
+    const removeIcon = make("span", "detail-block-menu-icon", "");
+    if (window.lucide) removeIcon.innerHTML = '<i data-lucide="trash-2"></i>';
+    else removeIcon.textContent = "×";
+    remove.append(removeIcon, make("span", "", "Delete block"));
+    remove.addEventListener("click", () => {
+      const next = blocks.filter((entry, i) => i !== index);
+      persistBlocks(next.length ? next : [{ id: "block-" + Date.now(), type: "paragraph", text: "" }]);
+    });
+    menu.append(remove);
+
+    if (window.lucide) lucide.createIcons();
+    return menu;
+  }
+
   function renderDocBlocks(item, body) {
     const blocks = normalizeBlocks(item);
     const doc = make("div", "detail-doc");
+
     const renderBlock = (block, index) => {
       const wrap = make("div", "detail-doc-block-wrap");
-      const blockNode = make(block.type === "heading" ? "h2" : block.type === "quote" ? "blockquote" : "div",
-        "detail-doc-block detail-doc-" + block.type, "");
+      const blockNode = make(
+        block.type === "heading" ? "h2" : block.type === "quote" ? "blockquote" : "div",
+        "detail-doc-block detail-doc-" + block.type,
+        ""
+      );
       blockNode.dataset.blockIndex = String(index);
       blockNode.dataset.blockId = block.id;
       blockNode.tabIndex = 0;
       blockNode.setAttribute("role", "button");
       blockNode.setAttribute("aria-label", "Edit " + block.type + " block");
       const text = block.text || "";
+
       if (block.type === "bulleted" || block.type === "numbered") {
         const list = make(block.type === "numbered" ? "ol" : "ul", "detail-doc-list");
-        (text ? text.split("\\n") : [""]).forEach(line => list.append(make("li", "", line)));
+        (text ? text.split("\n") : [""]).forEach(line => list.append(make("li", "", line)));
         blockNode.append(list);
       } else {
         blockNode.textContent = text || (block.type === "heading" ? "Heading" : block.type === "quote" ? "Quote" : "Click to write…");
         if (!text) blockNode.classList.add("is-empty");
       }
+
       const edit = () => {
         if (activeEditor) return;
         activeEditor = true;
         const editor = make("textarea", "detail-inline-input detail-inline-textarea detail-block-editor");
         editor.value = text;
-        editor.rows = Math.max(1, Math.min(8, (text.match(/\\n/g) || []).length + 1));
+        editor.rows = Math.max(1, Math.min(8, (text.match(/\n/g) || []).length + 1));
         editor.setAttribute("aria-label", "Edit block text");
         blockNode.replaceChildren(editor);
         blockNode.classList.add("is-editing");
         editor.focus();
         editor.style.height = "auto";
         editor.style.height = Math.max(block.type === "heading" ? 44 : 36, editor.scrollHeight) + "px";
+
         let finished = false;
         const finish = commit => {
           if (finished) return;
@@ -237,18 +305,30 @@
           if (commit && editor.value !== text) {
             const next = blocks.map((entry, i) => i === index ? { ...entry, text: editor.value } : entry);
             persistBlocks(next);
-          } else renderDetail();
+          } else {
+            renderDetail();
+          }
         };
         editor.addEventListener("keydown", event => {
-          if (event.key === "Escape") { event.preventDefault(); finish(false); }
-          else if (event.key === "Enter" && event.metaKey) { event.preventDefault(); finish(true); }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            finish(false);
+          } else if (event.key === "Enter" && event.metaKey) {
+            event.preventDefault();
+            finish(true);
+          }
         });
         editor.addEventListener("blur", () => finish(true));
       };
+
       blockNode.addEventListener("click", edit);
       blockNode.addEventListener("keydown", event => {
-        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); edit(); }
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          edit();
+        }
       });
+
       const controls = make("div", "detail-block-controls");
       const add = make("button", "detail-block-add", "+");
       add.type = "button";
@@ -259,20 +339,26 @@
         doc.querySelectorAll(".detail-block-menu").forEach(menu => menu.remove());
         wrap.append(blockAddMenu(blocks, index + 1));
       });
-      const remove = make("button", "detail-block-remove", "×");
-      remove.type = "button";
-      remove.title = "Delete block";
-      remove.setAttribute("aria-label", "Delete block");
-      remove.addEventListener("click", event => {
+
+      const more = make("button", "detail-block-more", "⋯");
+      more.type = "button";
+      more.title = "Block options";
+      more.setAttribute("aria-label", "Block options");
+      more.setAttribute("aria-haspopup", "menu");
+      more.addEventListener("click", event => {
         event.stopPropagation();
-        const next = blocks.filter((entry, i) => i !== index);
-        persistBlocks(next.length ? next : [{ id: "block-" + Date.now(), type: "paragraph", text: "" }]);
+        const existing = wrap.querySelector(".detail-block-action-menu");
+        doc.querySelectorAll(".detail-block-menu").forEach(menu => menu.remove());
+        if (!existing) wrap.append(blockActionMenu(blocks, index));
       });
-      controls.append(add, remove);
+
+      controls.append(add, more);
       wrap.append(blockNode, controls);
       return wrap;
     };
+
     blocks.forEach((block, index) => doc.append(renderBlock(block, index)));
+
     const addLast = make("button", "detail-doc-add-last", "+ Add a block");
     addLast.type = "button";
     addLast.addEventListener("click", () => {
