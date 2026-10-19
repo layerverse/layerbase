@@ -897,3 +897,7 @@
     min-height: 150px;
   }
 }
+
+
+/* The document is the editing surface; keep the old card-level Edit shortcut out of the way. */
+#pageContent .item-action[data-edit-item] { display: none !important; }
