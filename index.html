@@ -179,6 +179,20 @@
   </section>
 </div>
 
+
+<div class="detail-backdrop" id="detailBackdrop" hidden>
+  <article class="detail-sheet" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <header class="detail-toolbar">
+      <div class="detail-breadcrumb" id="detailBreadcrumb">Item</div>
+      <div class="detail-toolbar-actions">
+        <button class="icon-button" id="detailEditBtn" title="Edit item" aria-label="Edit item"><i data-lucide="pencil"></i></button>
+        <button class="icon-button" id="closeDetailBtn" title="Close" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+    </header>
+    <div class="detail-content" id="detailContent"></div>
+  </article>
+</div>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script src="https://unpkg.com/lucide@0.468.0"></script>
