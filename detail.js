@@ -148,6 +148,141 @@
     root.append(properties);
   }
 
+  function normalizeBlocks(item) {
+    if (Array.isArray(item.contentBlocks)) return item.contentBlocks;
+    const legacy = item.content || "";
+    item.contentBlocks = legacy.trim()
+      ? legacy.split(/\\n\\s*\\n/).map((text, index) => ({ id: "block-" + index + "-" + Date.now(), type: "paragraph", text }))
+      : [{ id: "block-" + Date.now(), type: "paragraph", text: "" }];
+    return item.contentBlocks;
+  }
+
+  function blockText(blocks) {
+    return blocks.map(block => block.text || "").filter((text, index, arr) => text || index < arr.length - 1).join("\\n\\n");
+  }
+
+  function persistBlocks(blocks) {
+    persist(item => {
+      item.contentBlocks = blocks;
+      item.content = blockText(blocks);
+    });
+  }
+
+  function blockAddMenu(blocks, insertAt) {
+    const menu = make("div", "detail-block-menu");
+    [
+      ["paragraph", "Paragraph", "pilcrow"],
+      ["heading", "Heading", "heading-2"],
+      ["bulleted", "Bulleted list", "list"],
+      ["numbered", "Numbered list", "list-ordered"],
+      ["quote", "Quote", "quote"]
+    ].forEach(([type, label, icon]) => {
+      const button = make("button", "detail-block-menu-item");
+      button.type = "button";
+      const glyph = make("span", "detail-block-menu-icon", "");
+      glyph.innerHTML = window.lucide ? "" : "•";
+      if (window.lucide) glyph.innerHTML = '<i data-lucide="' + icon + '"></i>';
+      button.append(glyph, make("span", "", label));
+      button.addEventListener("click", () => {
+        const next = [...blocks];
+        next.splice(insertAt, 0, { id: "block-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7), type, text: "" });
+        persistBlocks(next);
+        const last = $("#detailContent .detail-doc-block[data-block-index='" + insertAt + "']");
+        if (last) last.click();
+      });
+      menu.append(button);
+    });
+    if (window.lucide) lucide.createIcons();
+    return menu;
+  }
+
+  function renderDocBlocks(item, body) {
+    const blocks = normalizeBlocks(item);
+    const doc = make("div", "detail-doc");
+    const renderBlock = (block, index) => {
+      const wrap = make("div", "detail-doc-block-wrap");
+      const blockNode = make(block.type === "heading" ? "h2" : block.type === "quote" ? "blockquote" : "div",
+        "detail-doc-block detail-doc-" + block.type, "");
+      blockNode.dataset.blockIndex = String(index);
+      blockNode.dataset.blockId = block.id;
+      blockNode.tabIndex = 0;
+      blockNode.setAttribute("role", "button");
+      blockNode.setAttribute("aria-label", "Edit " + block.type + " block");
+      const text = block.text || "";
+      if (block.type === "bulleted" || block.type === "numbered") {
+        const list = make(block.type === "numbered" ? "ol" : "ul", "detail-doc-list");
+        (text ? text.split("\\n") : [""]).forEach(line => list.append(make("li", "", line)));
+        blockNode.append(list);
+      } else {
+        blockNode.textContent = text || (block.type === "heading" ? "Heading" : block.type === "quote" ? "Quote" : "Click to write…");
+        if (!text) blockNode.classList.add("is-empty");
+      }
+      const edit = () => {
+        if (activeEditor) return;
+        activeEditor = true;
+        const editor = make("textarea", "detail-inline-input detail-inline-textarea detail-block-editor");
+        editor.value = text;
+        editor.rows = Math.max(1, Math.min(8, (text.match(/\\n/g) || []).length + 1));
+        editor.setAttribute("aria-label", "Edit block text");
+        blockNode.replaceChildren(editor);
+        blockNode.classList.add("is-editing");
+        editor.focus();
+        editor.style.height = "auto";
+        editor.style.height = Math.max(block.type === "heading" ? 44 : 36, editor.scrollHeight) + "px";
+        let finished = false;
+        const finish = commit => {
+          if (finished) return;
+          finished = true;
+          activeEditor = false;
+          if (commit && editor.value !== text) {
+            const next = blocks.map((entry, i) => i === index ? { ...entry, text: editor.value } : entry);
+            persistBlocks(next);
+          } else renderDetail();
+        };
+        editor.addEventListener("keydown", event => {
+          if (event.key === "Escape") { event.preventDefault(); finish(false); }
+          else if (event.key === "Enter" && event.metaKey) { event.preventDefault(); finish(true); }
+        });
+        editor.addEventListener("blur", () => finish(true));
+      };
+      blockNode.addEventListener("click", edit);
+      blockNode.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); edit(); }
+      });
+      const controls = make("div", "detail-block-controls");
+      const add = make("button", "detail-block-add", "+");
+      add.type = "button";
+      add.title = "Add block below";
+      add.setAttribute("aria-label", "Add block below");
+      add.addEventListener("click", event => {
+        event.stopPropagation();
+        doc.querySelectorAll(".detail-block-menu").forEach(menu => menu.remove());
+        wrap.append(blockAddMenu(blocks, index + 1));
+      });
+      const remove = make("button", "detail-block-remove", "×");
+      remove.type = "button";
+      remove.title = "Delete block";
+      remove.setAttribute("aria-label", "Delete block");
+      remove.addEventListener("click", event => {
+        event.stopPropagation();
+        const next = blocks.filter((entry, i) => i !== index);
+        persistBlocks(next.length ? next : [{ id: "block-" + Date.now(), type: "paragraph", text: "" }]);
+      });
+      controls.append(add, remove);
+      wrap.append(blockNode, controls);
+      return wrap;
+    };
+    blocks.forEach((block, index) => doc.append(renderBlock(block, index)));
+    const addLast = make("button", "detail-doc-add-last", "+ Add a block");
+    addLast.type = "button";
+    addLast.addEventListener("click", () => {
+      doc.querySelectorAll(".detail-block-menu").forEach(menu => menu.remove());
+      doc.append(blockAddMenu(blocks, blocks.length));
+    });
+    doc.append(addLast);
+    body.append(doc);
+  }
+
   function renderDetail() {
     const item = currentItem();
     if (!item) return closeDetail();
@@ -172,19 +307,8 @@
 
     const body = make("section", "detail-body-section");
     const bodyLabel = make("div", "detail-body-label", "Content");
-    const content = make("div", "detail-prose detail-editable", item.content || "Click here to add content…");
-    content.dataset.value = item.content || "";
-    content.classList.toggle("detail-empty-content", !item.content);
-    content.tabIndex = 0;
-    content.setAttribute("role", "button");
-    content.setAttribute("aria-label", "Click to edit content");
-    const editContent = () => startFieldEdit(content, { multiline: true, apply: (entry, value) => { entry.content = value; } });
-    content.addEventListener("click", editContent);
-    content.addEventListener("keydown", event => {
-      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); editContent(); }
-    });
-    bodyLabel.addEventListener("click", editContent);
-    body.append(bodyLabel, content);
+    body.append(bodyLabel);
+    renderDocBlocks(item, body);
 
     if (item.type === "image" && safeUrl(item.image)) {
       const figure = make("figure", "detail-image");
@@ -192,7 +316,7 @@
       img.src = safeUrl(item.image);
       img.alt = item.title;
       figure.append(img);
-      body.insertBefore(figure, content);
+      body.insertBefore(figure, body.querySelector(".detail-doc"));
     }
     if (item.type === "bookmark" && safeUrl(item.url)) {
       const link = make("a", "detail-link");
@@ -204,7 +328,7 @@
       copy.append(make("strong", "", new URL(safeUrl(item.url)).hostname));
       copy.append(make("small", "", item.url));
       link.append(copy);
-      body.insertBefore(link, content);
+      body.insertBefore(link, body.querySelector(".detail-doc"));
     }
     const footer = make("footer", "detail-footer");
     footer.append(make("span", "", "Last edited " + formatDate(item.updatedAt || item.createdAt)));
