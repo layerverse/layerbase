@@ -1105,3 +1105,57 @@
   .detail-doc-block { font-size: 15px; }
   .detail-doc-heading { font-size: 21px; }
 }
+
+
+/* Block actions: keep controls quiet until the block is hovered or focused. */
+.detail-block-add,
+.detail-block-more {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #938aa6;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.detail-block-more {
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+.detail-block-add:hover,
+.detail-block-more:hover,
+.detail-block-add:focus-visible,
+.detail-block-more:focus-visible {
+  background: #f3effa;
+  color: #7658bd;
+}
+.detail-block-action-menu {
+  margin-left: 0;
+}
+.detail-block-menu-item.is-current {
+  background: #f6f3fb;
+  color: #7658bd;
+}
+.detail-block-menu-divider {
+  height: 1px;
+  margin: 4px 3px;
+  background: #eee9f5;
+}
+.detail-block-menu-danger {
+  color: #9a5b68;
+}
+.detail-block-menu-danger:hover {
+  background: #fbf0f2;
+  color: #9a4657;
+}
+@media (max-width: 640px) {
+  .detail-doc-block-wrap > .detail-block-controls {
+    display: flex;
+    flex-direction: row;
+  }
+}
