@@ -930,3 +930,18 @@
 .detail-property-value .detail-inline-input {
   padding: 7px 9px;
 }
+
+
+/* Final editor surface tuning */
+.detail-inline-input,
+.detail-inline-input:focus {
+  background: transparent !important;
+}
+.detail-editable.is-editing .detail-inline-input,
+.detail-property-value.is-editing .detail-inline-input {
+  background: transparent !important;
+}
+.detail-property-value.is-editing .detail-inline-input {
+  background: #f5f2fb !important;
+  border-radius: 6px !important;
+}
