@@ -901,3 +901,32 @@
 
 /* The document is the editing surface; keep the old card-level Edit shortcut out of the way. */
 #pageContent .item-action[data-edit-item] { display: none !important; }
+
+
+/* Notion-like inline editing: no input borders, just a subtle editing surface and caret. */
+.detail-inline-input,
+.detail-inline-input:focus {
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: #faf9fd !important;
+  caret-color: var(--purple, #8063c3);
+}
+.detail-inline-textarea {
+  padding: 7px 9px;
+  resize: vertical;
+}
+.detail-editable.is-editing,
+.detail-property-value.is-editing {
+  outline: none !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.detail-property-value.is-editing {
+  padding: 0;
+}
+.detail-property-value .detail-inline-input {
+  padding: 7px 9px;
+}
