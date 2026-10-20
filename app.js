@@ -121,6 +121,7 @@ const state = {
   page: "home",
   activeCollectionId: null,
   layout: "grid",
+  cardStyle: localStorage.getItem("layerbase-card-style") === "mono" ? "mono" : "soft",
   query: "",
   editingItemId: null
 };
@@ -347,35 +348,64 @@ function sectionTitle(title, subtitle = "", action = "") {
 
 function itemCover(item) {
   const imageUrl = safeUrl(item.image);
-
+  const isSoft = state.cardStyle === "soft";
+  if (isSoft) {
+    if (item.type === "image" && imageUrl) {
+      return `
+        <div class="item-cover item-cover-preview item-cover-image">
+          <img src="${escapeHTML(imageUrl)}" alt="" loading="lazy"
+            onerror="this.style.display='none'; this.parentElement.classList.add('item-cover-preview-failed')">
+          <span class="cover-fallback-icon" hidden>${iconMarkup("image")}</span>
+          <span class="cover-type">IMAGE</span>
+        </div>`;
+    }
+    if (item.type === "bookmark") {
+      const previewUrl = imageUrl || (safeUrl(item.url)
+        ? "https://s.wordpress.com/mshots/v1/" + encodeURIComponent(safeUrl(item.url)) + "?w=1200"
+        : "");
+      if (previewUrl) {
+        return `
+        <div class="item-cover item-cover-preview item-cover-bookmark">
+          <img src="${escapeHTML(previewUrl)}" alt="" loading="lazy"
+            onerror="this.style.display='none'; this.parentElement.classList.add('item-cover-preview-failed')">
+          <span class="cover-fallback-icon" hidden>${iconMarkup("link-2")}</span>
+          <span class="cover-type">BOOKMARK</span>
+        </div>`;
+      }
+    }
+    if (item.type === "note" && item.content?.trim()) {
+      return `
+        <div class="item-cover item-cover-preview item-cover-note">
+          <div class="cover-note-text">${escapeHTML(item.content.trim())}</div>
+          <span class="cover-type">NOTE</span>
+        </div>`;
+    }
+    return `
+      <div class="item-cover item-cover-preview item-cover-fallback">
+        <div class="cover-placeholder">${iconMarkup(typeSymbols[item.type] || "sticky-note")}</div>
+        <span class="cover-type">${escapeHTML(typeNames[item.type] || "Item")}</span>
+      </div>`;
+  }
   if (imageUrl) {
     return `
       <div class="item-cover">
-        <img src="${escapeHTML(imageUrl)}"
-          alt="" loading="lazy"
+        <img src="${escapeHTML(imageUrl)}" alt="" loading="lazy"
           onerror="this.style.display='none'; this.parentElement.classList.add('cover-fallback')">
         <span class="cover-type">${escapeHTML(typeNames[item.type])}</span>
-      </div>
-    `;
+      </div>`;
   }
-
   if (item.type === "bookmark" && safeUrl(item.url)) {
     return `
       <div class="item-cover">
         <div class="cover-placeholder">${iconMarkup("link-2")}</div>
         <span class="cover-type">BOOKMARK</span>
-      </div>
-    `;
+      </div>`;
   }
-
   return `
     <div class="item-cover">
-      <div class="cover-placeholder">
-        ${iconMarkup(typeSymbols[item.type] || "sticky-note")}
-      </div>
+      <div class="cover-placeholder">${iconMarkup(typeSymbols[item.type] || "sticky-note")}</div>
       <span class="cover-type">${escapeHTML(typeNames[item.type] || "Note")}</span>
-    </div>
-  `;
+    </div>`;
 }
 
 function itemTags(item) {
@@ -391,34 +421,27 @@ function itemTags(item) {
 }
 
 function itemCard(item) {
+  const cardStyle = state.cardStyle === "soft" ? "card-style-soft" : "card-style-mono";
   return `
-    <article class="item-card" data-item-card="${escapeHTML(item.id)}">
+    <article class="item-card ${cardStyle} item-kind-${escapeHTML(item.type)}" data-item-card="${escapeHTML(item.id)}">
       ${itemCover(item)}
-
       <div class="item-body">
         <div class="item-type">
           <span class="type-dot ${escapeHTML(item.type)}"></span>
           ${escapeHTML(typeNames[item.type] || "Item")}
         </div>
-
         <h3>${escapeHTML(item.title)}</h3>
-
-        ${item.content ? `
-          <p class="item-description">${escapeHTML(item.content)}</p>
-        ` : ""}
-
+        ${item.content && !(state.cardStyle === "soft" && item.type === "note") ? `
+          <p class="item-description">${escapeHTML(item.content)}</p>` : ""}
         ${itemTags(item)}
-
         <div class="item-meta">
           <span>${formatDate(item.createdAt)}</span>
           <span class="item-actions">
-            <button class="item-action"
-              data-edit-item="${escapeHTML(item.id)}">Edit</button>
+            <button class="item-action" data-edit-item="${escapeHTML(item.id)}">Edit</button>
           </span>
         </div>
       </div>
-    </article>
-  `;
+    </article>`;
 }
 
 function emptyState(title, description, buttonLabel = "Create item") {
@@ -457,6 +480,11 @@ function renderGallery(items, options = {}) {
               ${layout.charAt(0).toUpperCase() + layout.slice(1)}
             </button>
           `).join("")}
+        </div>
+
+        <div class="card-style-switcher card-style-current-${state.cardStyle}" aria-label="Card style">
+          <button class="card-style-button" data-card-style="mono" aria-pressed="${state.cardStyle === "mono"}">Mono</button>
+          <button class="card-style-button" data-card-style="soft" aria-pressed="${state.cardStyle === "soft"}">Soft</button>
         </div>
 
         <span class="item-count">
@@ -957,6 +985,17 @@ document.addEventListener("click", (event) => {
 
   if (layoutButton) {
     state.layout = layoutButton.dataset.layout;
+    render();
+    return;
+  }
+
+  const cardStyleButton = event.target.closest("[data-card-style]");
+
+  if (cardStyleButton) {
+    state.cardStyle = cardStyleButton.dataset.cardStyle === "mono" ? "mono" : "soft";
+    try {
+      localStorage.setItem("layerbase-card-style", state.cardStyle);
+    } catch (_) {}
     render();
     return;
   }
