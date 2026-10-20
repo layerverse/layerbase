@@ -1422,3 +1422,187 @@
     margin-left: 2px;
   }
 }
+
+
+/* Final cascade overrides: Soft is a true cover-first card, not a bordered tile. */
+.item-card.card-style-soft,
+.item-card.card-style-soft:hover {
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow:
+    0 7px 18px rgba(53, 43, 79, .09),
+    0 2px 5px rgba(53, 43, 79, .045),
+    0 0 1px rgba(65, 52, 92, .10) !important;
+  transform: translateY(0);
+}
+.item-card.card-style-soft:hover {
+  box-shadow:
+    0 12px 28px rgba(53, 43, 79, .13),
+    0 3px 8px rgba(53, 43, 79, .055),
+    0 0 1px rgba(65, 52, 92, .08) !important;
+  transform: translateY(-2px);
+}
+.item-card.card-style-soft .item-cover,
+.item-card.card-style-soft:hover .item-cover {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 18px 18px 0 0 !important;
+  background: #f2eff8;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.item-card.card-style-soft .item-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.item-card.card-style-soft .item-body {
+  min-width: 0;
+  padding: 13px 15px 14px !important;
+  border: 0 !important;
+  background: #fff !important;
+}
+.item-card.card-style-soft .item-type {
+  margin: 0 0 6px;
+  font-size: 9px;
+  letter-spacing: .7px;
+}
+.item-card.card-style-soft h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.item-card.card-style-soft .item-description {
+  display: none !important;
+}
+.item-card.card-style-soft .item-tags {
+  margin-top: 9px;
+}
+.item-card.card-style-soft .item-meta {
+  margin-top: 10px;
+  padding-top: 0 !important;
+  border: 0 !important;
+}
+.item-card.card-style-soft .item-action {
+  border: 0 !important;
+  background: transparent;
+}
+.item-card.card-style-soft .item-cover-preview {
+  aspect-ratio: 4 / 3;
+}
+.item-card.card-style-soft .item-cover-note {
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 85% 15%, rgba(205,194,242,.52), transparent 48%),
+    linear-gradient(135deg, #f5f1fc 0%, #eef6f5 100%) !important;
+}
+.item-card.card-style-soft .cover-note-text {
+  font-size: 14px;
+  line-height: 1.7;
+  -webkit-line-clamp: 5;
+}
+.item-card.card-style-soft .item-cover-fallback .cover-placeholder {
+  background:
+    radial-gradient(ellipse at 85% 15%, rgba(205,194,242,.52), transparent 48%),
+    linear-gradient(135deg, #f5f1fc 0%, #eef6f5 100%);
+}
+
+/* The home recents use a compact grid, but keep the preview dominant there too. */
+.recents-grid .item-card.card-style-soft {
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+.recents-grid .item-card.card-style-soft .item-cover {
+  height: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: 4 / 3 !important;
+}
+.recents-grid .item-card.card-style-soft .item-body {
+  padding: 11px 12px 12px !important;
+}
+.recents-grid .item-card.card-style-soft .item-type {
+  margin-bottom: 5px;
+}
+.recents-grid .item-card.card-style-soft h3 {
+  min-height: 0 !important;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 14px;
+}
+.recents-grid .item-card.card-style-soft .item-tags,
+.recents-grid .item-card.card-style-soft .item-meta {
+  display: none;
+}
+
+/* In River layout the cover remains the visual anchor, with a soft raised card. */
+.item-grid.layout-river .item-card.card-style-soft {
+  grid-template-columns: minmax(100px, 42%) minmax(0, 1fr);
+  border: 0 !important;
+}
+.item-grid.layout-river .item-card.card-style-soft .item-cover {
+  height: 100%;
+  min-height: 160px;
+  aspect-ratio: auto;
+  border-radius: 18px 0 0 18px !important;
+}
+.item-grid.layout-river .item-card.card-style-soft .item-body {
+  padding: 14px !important;
+}
+.item-grid.layout-river .item-card.card-style-soft .item-meta {
+  margin-top: 10px;
+}
+
+/* Strong, clearly selected style switch with no bevelled line treatment. */
+.card-style-switcher {
+  border: 0 !important;
+  border-radius: 12px;
+  background: #eeebf4 !important;
+  box-shadow: inset 0 1px 3px rgba(57, 47, 79, .08) !important;
+}
+.card-style-button {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.card-style-current-soft [data-card-style="soft"],
+.card-style-current-mono [data-card-style="mono"] {
+  border: 0 !important;
+  border-radius: 9px;
+  background: #fff !important;
+  color: #6549a7 !important;
+  box-shadow: 0 2px 6px rgba(57, 47, 79, .12) !important;
+}
+
+/* The document block controls always have a dedicated left gutter. */
+.detail-doc-block-wrap {
+  display: grid !important;
+  grid-template-columns: 43px minmax(0, 1fr) !important;
+  column-gap: 7px !important;
+}
+.detail-doc-block-wrap > .detail-doc-block {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+.detail-doc-block-wrap > .detail-block-controls {
+  position: static !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-content: flex-end;
+  padding-top: 3px;
+}
+@media (max-width: 640px) {
+  .detail-doc-block-wrap {
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    column-gap: 5px !important;
+  }
+}
