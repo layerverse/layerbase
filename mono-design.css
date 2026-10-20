@@ -1698,3 +1698,48 @@
 .item-card.card-style-soft .item-meta,
 .item-card.card-style-soft .item-body::before,
 .item-card.card-style-soft .item-body::after { border-top: 0 !important; border-bottom: 0 !important; }
+
+/* Final card-surface fix: the card wrapper and text area stay transparent.
+   Only the cover itself carries the visible outline and hover treatment. */
+#pageContent .item-grid .item-card,
+#pageContent .recents-grid .item-card,
+#pageContent .item-grid .item-card:hover,
+#pageContent .recents-grid .item-card:hover {
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+#pageContent .item-grid .item-card > .item-body,
+#pageContent .recents-grid .item-card > .item-body,
+#pageContent .item-grid .item-card:hover > .item-body,
+#pageContent .recents-grid .item-card:hover > .item-body {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#pageContent .item-grid .item-card > .item-cover,
+#pageContent .recents-grid .item-card > .item-cover {
+  border: 2px solid var(--line) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background-clip: padding-box;
+}
+#pageContent .item-grid .item-card:hover > .item-cover,
+#pageContent .recents-grid .item-card:hover > .item-cover {
+  border-color: var(--purple-line) !important;
+  box-shadow: 0 3px 0 rgba(139, 107, 212, .12) !important;
+  transform: translateY(-1px) !important;
+}
+#pageContent .item-grid.layout-river .item-card > .item-cover {
+  border: 2px solid var(--line) !important;
+  border-radius: 12px !important;
+}
+#pageContent .item-grid.layout-river .item-card:hover > .item-cover {
+  border-color: var(--purple-line) !important;
+}
