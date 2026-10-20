@@ -1743,3 +1743,38 @@
 #pageContent .item-grid.layout-river .item-card:hover > .item-cover {
   border-color: var(--purple-line) !important;
 }
+
+/* Definitive borderless card surfaces: no outline on the wrapper or cover. */
+#pageContent .item-card,
+#pageContent .item-card:hover,
+#pageContent .item-card:focus-within,
+#pageContent .item-card > .item-cover,
+#pageContent .item-card > .item-body,
+#pageContent .item-card:hover > .item-cover,
+#pageContent .item-card:hover > .item-body,
+#pageContent .recents-grid .item-card,
+#pageContent .recents-grid .item-card:hover,
+#pageContent .recents-grid .item-card > .item-cover,
+#pageContent .recents-grid .item-card > .item-body {
+  border: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#pageContent .item-card::before,
+#pageContent .item-card::after,
+#pageContent .item-card > .item-cover::before,
+#pageContent .item-card > .item-cover::after,
+#pageContent .item-card > .item-body::before,
+#pageContent .item-card > .item-body::after,
+#pageContent .recents-grid .item-card::before,
+#pageContent .recents-grid .item-card::after {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+#pageContent .item-card:hover > .item-cover,
+#pageContent .recents-grid .item-card:hover > .item-cover {
+  transform: none !important;
+}
