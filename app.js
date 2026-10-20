@@ -116,12 +116,20 @@ function loadData() {
   return structuredClone(sampleData);
 }
 
+function loadCardStyle() {
+  try {
+    return localStorage.getItem("layerbase-card-style") === "mono" ? "mono" : "soft";
+  } catch (_) {
+    return "soft";
+  }
+}
+
 const state = {
   ...loadData(),
   page: "home",
   activeCollectionId: null,
   layout: "grid",
-  cardStyle: localStorage.getItem("layerbase-card-style") === "mono" ? "mono" : "soft",
+  cardStyle: loadCardStyle(),
   query: "",
   editingItemId: null
 };
