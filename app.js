@@ -118,7 +118,7 @@ function loadData() {
 
 function loadCardStyle() {
   try {
-    return localStorage.getItem("layerbase-card-style") === "mono" ? "mono" : "soft";
+    return localStorage.getItem("layerbase-card-style-v2") === "mono" ? "mono" : "soft";
   } catch (_) {
     return "soft";
   }
@@ -1002,7 +1002,7 @@ document.addEventListener("click", (event) => {
   if (cardStyleButton) {
     state.cardStyle = cardStyleButton.dataset.cardStyle === "mono" ? "mono" : "soft";
     try {
-      localStorage.setItem("layerbase-card-style", state.cardStyle);
+      localStorage.setItem("layerbase-card-style-v2", state.cardStyle);
     } catch (_) {}
     render();
     return;
